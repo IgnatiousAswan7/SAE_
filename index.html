@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Channel IR Line Follower Robot | ESP32 | Advanced PID Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1F4788;
+            --accent: #E74C3C;
+            --dark: #2C3E50;
+            --light: #ECF0F1;
+            --success: #27AE60;
+            --orange: #F39C12;
+            --text: #34495E;
+            --white: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* ============ NAVIGATION ============ */
+        nav {
+            background: linear-gradient(135deg, var(--primary) 0%, #15365c 100%);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        nav .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--white);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        /* ============ HERO SECTION ============ */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #0f2440 100%);
+            color: var(--white);
+            padding: 6rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            font-weight: 800;
+        }
+
+        .hero h1 span {
+            color: var(--accent);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--white);
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-decoration: none;
+            margin: 0.5rem;
+        }
+
+        .cta-button:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .cta-secondary {
+            background: transparent;
+            border: 2px solid var(--white);
+            color: var(--white);
+        }
+
+        .cta-secondary:hover {
+            background: var(--white);
+            color: var(--primary);
+        }
+
+        /* ============ FEATURES SECTION ============ */
+        .features {
+            padding: 4rem 2rem;
+            background: var(--light);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        .section-title span {
+            color: var(--accent);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: 0.3s;
+            border-left: 5px solid var(--accent);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .feature-card p {
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        /* ============ HARDWARE SECTION ============ */
+        .hardware {
+            padding: 4rem 2rem;
+            background: var(--white);
+        }
+
+        .hardware-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .hardware-image {
+            text-align: center;
+        }
+
+        .hardware-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .hardware-specs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .spec-item {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-top: 3px solid var(--accent);
+        }
+
+        .spec-item h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+
+        .spec-item p {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        /* ============ SPECIFICATIONS TABLE ============ */
+        .specifications {
+            padding: 4rem 2rem;
+            background: var(--light);
+        }
+
+        .specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .specs-table th {
+            background: var(--primary);
+            color: var(--white);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .specs-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--light);
+        }
+
+        .specs-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .specs-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ============ CODE SECTION ============ */
+        .code-section {
+            padding: 4rem 2rem;
+            background: var(--white);
+        }
+
+        .code-block {
+            background: var(--dark);
+            color: #00FF00;
+            padding: 2rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 2rem 0;
+            border-left: 5px solid var(--accent);
+        }
+
+        .code-title {
+            background: var(--accent);
+            color: var(--white);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            margin-top: 2rem;
+            margin-bottom: 0;
+        }
+
+        /* ============ GALLERY ============ */
+        .gallery {
+            padding: 4rem 2rem;
+            background: var(--light);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(31, 71, 136, 0.9);
+            color: white;
+            padding: 1.5rem;
+            transform: translateY(100%);
+            transition: 0.3s;
+        }
+
+        .gallery-item:hover .gallery-overlay {
+            transform: translateY(0);
+        }
+
+        /* ============ CONTROL LOGIC ============ */
+        .logic-section {
+            padding: 4rem 2rem;
+            background: var(--white);
+        }
+
+        .logic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .logic-card {
+            background: linear-gradient(135deg, var(--primary) 0%, #0f2440 100%);
+            color: var(--white);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .logic-card h4 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .logic-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .logic-card li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .logic-card li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* ============ FOOTER ============ */
+        footer {
+            background: var(--primary);
+            color: var(--white);
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        footer p {
+            margin: 0.5rem 0;
+        }
+
+        .footer-links {
+            margin: 1rem 0;
+        }
+
+        .footer-links a {
+            color: var(--accent);
+            text-decoration: none;
+            margin: 0 1rem;
+            transition: 0.3s;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .hardware-content {
+                grid-template-columns: 1fr;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .code-block {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* ============ ANIMATIONS ============ */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-card {
+            animation: slideIn 0.6s ease-out;
+        }
+
+        .feature-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .feature-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        /* ============ SCROLL TO TOP ============ */
+        .scroll-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 999;
+            transition: 0.3s;
+        }
+
+        .scroll-btn:hover {
+            background: #c0392b;
+            transform: translateY(-5px);
+        }
+
+        .scroll-btn.show {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVIGATION -->
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">🤖 Line Follower Robot</a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#hardware">Hardware</a></li>
+                <li><a href="#specs">Specs</a></li>
+                <li><a href="#code">Code</a></li>
+                <li><a href="#gallery">Gallery</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>8-Channel IR <span>Line Follower Robot</span></h1>
+            <p>Advanced autonomous line following with real-time PID control using ESP32 & TB6612FNG</p>
+            <div>
+                <a href="#features" class="cta-button">Explore Features</a>
+                <a href="#code" class="cta-button cta-secondary">View Code</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">Key <span>Features</span></h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📡</div>
+                    <h3>8-Channel IR Sensing</h3>
+                    <p>Dual-channel sensor array providing 350-unit weighted position estimation for precise line tracking.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Real-Time PID Control</h3>
+                    <p>Kp=0.55, Kd=1.10 constants for smooth tracking with dynamic error correction every 100ms.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚙️</div>
+                    <h3>Smart Turn Detection</h3>
+                    <p>Sharp turn thresholds (±220) and moderate turns (±110) for automatic steering adjustment.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Advanced Motor Control</h3>
+                    <p>TB6612FNG dual motor driver with independent speed control for differential steering.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Robust Error Handling</h3>
+                    <p>Lost line recovery using previous error direction with failsafe mechanisms.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Speed Optimization</h3>
+                    <p>Constrained motor speeds (25-110 range) for stable, predictable motion control.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HARDWARE SECTION -->
+    <section class="hardware" id="hardware">
+        <div class="container">
+            <h2 class="section-title">Hardware <span>Prototype</span></h2>
+            <div class="hardware-content">
+                <div class="hardware-image">
+                    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwwDAwwzDAwMDA0PEAwPDAwPDw8PEREREREREREREREREREREREREf/2wBDAQICAgICAwUDAwwzDAwMDA0PDAwPDAwPDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw/2wBDAQICAgMDAwYDAwYMCAcIDAwIDAwMDA0PDAwPDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw/wAARCAEOAQ4DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWm5ybnJ2eo6Slpqeoqaqys7S1tre4ubrDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/2Q==" alt="Line Follower Robot" style="display: none;">
+                </div>
+                <div>
+                    <h3 style="color: var(--primary); margin-bottom: 1.5rem; font-size: 1.5rem;">Complete Specifications</h3>
+                    <div class="hardware-specs">
+                        <div class="spec-item">
+                            <h4>🎛️ MAIN CONTROLLER</h4>
+                            <p>ESP32 30-pin Dev Board with 30 GPIO pins, fast ADC, and PWM capabilities</p>
+                        </div>
+                        <div class="spec-item">
+                            <h4>📊 SENSOR ARRAY</h4>
+                            <p>8-Channel IR digital sensors connected to GPIO 34,35,23,22,21,5,4,13</p>
+                        </div>
+                        <div class="spec-item">
+                            <h4>⚡ MOTOR DRIVER</h4>
+                            <p>TB6612FNG dual motor driver for independent left & right motor control</p>
+                        </div>
+                        <div class="spec-item">
+                            <h4>🔌 MOTORS</h4>
+                            <p>Two DC geared motors with precision speed control via PWM</p>
+                        </div>
+                        <div class="spec-item">
+                            <h4>⚙️ CONTROL LOGIC</h4>
+                            <p>PID-based real-time correction with smart turn detection</p>
+                        </div>
+                        <div class="spec-item">
+                            <h4>📈 RESPONSE TIME</h4>
+                            <p>~100ms main loop cycle for real-time sensor processing</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SPECIFICATIONS TABLE -->
+    <section class="specifications" id="specs">
+        <div class="container">
+            <h2 class="section-title">Technical <span>Specifications</span></h2>
+            <table class="specs-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Sensor Channels</strong></td>
+                        <td>8</td>
+                        <td>D1-D8 array with -350 to +350 weights</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Normal Speed</strong></td>
+                        <td>75 RPM</td>
+                        <td>Base speed for straight-line following</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Turn Speed</strong></td>
+                        <td>125 RPM</td>
+                        <td>Maximum speed for sharp turn outer motor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inside Speed</strong></td>
+                        <td>12 RPM</td>
+                        <td>Minimum speed for sharp turn inner motor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Speed Range</strong></td>
+                        <td>25-110 RPM</td>
+                        <td>Constrained limits for stability</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Kp (Proportional)</strong></td>
+                        <td>0.55</td>
+                        <td>Error response constant</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Kd (Derivative)</strong></td>
+                        <td>1.10</td>
+                        <td>Error change rate constant</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sharp Turn Threshold</strong></td>
+                        <td>±220</td>
+                        <td>Error value for sharp turn activation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Moderate Turn Threshold</strong></td>
+                        <td>±110</td>
+                        <td>Error value for moderate turn activation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Loop Cycle</strong></td>
+                        <td>~100ms</td>
+                        <td>Main processing loop time</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- CODE SECTION -->
+    <section class="code-section" id="code">
+        <div class="container">
+            <h2 class="section-title">Code <span>Structure</span></h2>
+
+            <div style="margin-top: 3rem;">
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">📋 Main Loop Function</h3>
+                <div class="code-title">void followLine() - Core Control Logic</div>
+                <div class="code-block">// Read 8 analog sensors and calculate weighted error
+for (int i = 0; i < 8; i++) {
+  int value = analogRead(irPins[i]);
+  sensor[i] = (value < IR_THRESHOLD) ? LOW : HIGH;
+  
+  int strength = (BLACK_IS_LOW) ? (IR_THRESHOLD - value) : (value - IR_THRESHOLD);
+  if (strength > 0) {
+    active++;
+    weightedSum += (long)weights[i] * strength;
+    totalStrength += strength;
+  }
+}
+
+// Calculate error position
+float error = (float)weightedSum / totalStrength;
+
+// Sharp left corner detection (D1 & D2)
+if (sensor[0] == LOW && sensor[1] == LOW) {
+  strongLeftTurn();  // Left: 5, Right: 140
+  return;
+}
+
+// Sharp right corner detection (D7 & D8)
+if (sensor[6] == LOW && sensor[7] == LOW) {
+  strongRightTurn();  // Left: 140, Right: 5
+  return;
+}
+
+// PID-based correction for normal tracking
+float derivative = error - lastError;
+float correction = (Kp * error) + (Kd * derivative);
+
+int leftSpeed = constrain(NORMAL_SPEED + correction, 25, 110);
+int rightSpeed = constrain(NORMAL_SPEED - correction, 25, 110);
+
+driveForward(leftSpeed, rightSpeed);
+lastError = error;
+                </div>
+
+                <h3 style="color: var(--primary); margin-bottom: 1rem; margin-top: 2rem;">⚙️ Motor Control Functions</h3>
+                <div class="code-title">Motor Speed & Direction Control</div>
+                <div class="code-block">void leftMotorForward(int speed) {
+  digitalWrite(AIN1, HIGH);
+  digitalWrite(AIN2, LOW);
+  ledcWrite(PWMA, speed);
+}
+
+void rightMotorForward(int speed) {
+  digitalWrite(BIN1, HIGH);
+  digitalWrite(BIN2, LOW);
+  ledcWrite(PWMB, speed);
+}
+
+void strongLeftTurn() {
+  leftMotorForward(5);      // Inner motor (slow)
+  rightMotorForward(140);   // Outer motor (fast)
+}
+
+void strongRightTurn() {
+  leftMotorForward(140);    // Outer motor (fast)
+  rightMotorForward(5);     // Inner motor (slow)
+}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTROL LOGIC SECTION -->
+    <section class="logic-section">
+        <div class="container">
+            <h2 class="section-title">Control <span>Logic</span></h2>
+            <div class="logic-grid">
+                <div class="logic-card">
+                    <h4>📍 SENSOR WEIGHTING</h4>
+                    <ul>
+                        <li>D1 (LEFT-MOST): -350</li>
+                        <li>D2: -250</li>
+                        <li>D3: -150</li>
+                        <li>D4: -50</li>
+                        <li>D5: +50</li>
+                        <li>D6: +150</li>
+                        <li>D7: +250</li>
+                        <li>D8 (RIGHT-MOST): +350</li>
+                    </ul>
+                </div>
+                <div class="logic-card">
+                    <h4>🔴 SHARP TURN DETECTION</h4>
+                    <ul>
+                        <li>LEFT: D1 & D2 = BLACK</li>
+                        <li>LEFT: Error ≤ -220</li>
+                        <li>Action: L:5 R:140</li>
+                        <li> </li>
+                        <li>RIGHT: D7 & D8 = BLACK</li>
+                        <li>RIGHT: Error ≥ +220</li>
+                        <li>Action: L:140 R:5</li>
+                    </ul>
+                </div>
+                <div class="logic-card">
+                    <h4>🟠 MODERATE TURN LOGIC</h4>
+                    <ul>
+                        <li>LEFT: Error ≤ -110</li>
+                        <li>Action: L:25 R:105</li>
+                        <li> </li>
+                        <li>RIGHT: Error ≥ +110</li>
+                        <li>Action: L:105 R:25</li>
+                        <li> </li>
+                        <li>Smooth transition before sharp turn</li>
+                    </ul>
+                </div>
+                <div class="logic-card">
+                    <h4>🧮 PID CORRECTION</h4>
+                    <ul>
+                        <li>Correction = (Kp × Error) + (Kd × ΔError)</li>
+                        <li>Kp = 0.55 (Proportional)</li>
+                        <li>Kd = 1.10 (Derivative)</li>
+                        <li>Base Speed = 75 RPM</li>
+                        <li>Left = Base + Correction</li>
+                        <li>Right = Base - Correction</li>
+                    </ul>
+                </div>
+                <div class="logic-card">
+                    <h4>🎯 LOST LINE RECOVERY</h4>
+                    <ul>
+                        <li>If no sensors detect line:</li>
+                        <li>Check lastError direction</li>
+                        <li>If lastError < 0: Turn LEFT</li>
+                        <li>If lastError > 0: Turn RIGHT</li>
+                        <li>Search spiral pattern</li>
+                        <li>Stop if no prior direction</li>
+                    </ul>
+                </div>
+                <div class="logic-card">
+                    <h4>⏱️ SPEED CONSTRAINTS</h4>
+                    <ul>
+                        <li>Normal Speed: 75</li>
+                        <li>Turn Speed: 125</li>
+                        <li>Inside Speed: 12</li>
+                        <li>Moderate Outside: 105</li>
+                        <li>Moderate Inside: 25</li>
+                        <li>Range Limit: 25-110</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GALLERY SECTION -->
+    <section class="gallery" id="gallery">
+        <div class="container">
+            <h2 class="section-title">Project <span>Gallery</span></h2>
+            <div class="gallery-grid">
+                <div class="gallery-item">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Crect fill='%231F4788' width='300' height='300'/%3E%3Ctext x='150' y='150' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3ERobot Front View%3C/text%3E%3C/svg%3E" alt="Front View">
+                    <div class="gallery-overlay">
+                        <h4>Prototype Assembly</h4>
+                        <p>Complete hardware setup with all components integrated</p>
+                    </div>
+                </div>
+                <div class="gallery-item">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Crect fill='%23E74C3C' width='300' height='300'/%3E%3Ctext x='150' y='150' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3EMotor Driver Board%3C/text%3E%3C/svg%3E" alt="Motor Driver">
+                    <div class="gallery-overlay">
+                        <h4>TB6612FNG Driver</h4>
+                        <p>Dual motor control with PWM and direction pins</p>
+                    </div>
+                </div>
+                <div class="gallery-item">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Crect fill='%2327AE60' width='300' height='300'/%3E%3Ctext x='150' y='150' font-size='24' fill='white' text-anchor='middle' dominant-baseline='middle'%3ESensor Array%3C/text%3E%3C/svg%3E" alt="Sensors">
+                    <div class="gallery-overlay">
+                        <h4>8-Channel IR Sensors</h4>
+                        <p>Precisely positioned for optimal line detection</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <h3 style="margin-bottom: 1rem;">🚀 Line Follower Robot Project</h3>
+            <p><strong>Technology Stack:</strong> ESP32 • TB6612FNG • 8-Channel IR Sensors • Arduino IDE</p>
+            <p><strong>Control Algorithm:</strong> Real-time PID with Smart Turn Detection</p>
+            <p><strong>Status:</strong> ✅ Complete & Tested | 🏆 Competition Ready</p>
+            <div class="footer-links">
+                <a href="#features">Features</a>
+                <a href="#hardware">Hardware</a>
+                <a href="#specs">Specifications</a>
+                <a href="#code">Code</a>
+                <a href="#gallery">Gallery</a>
+            </div>
+            <p style="margin-top: 2rem; opacity: 0.8;">© 2024 8-Channel Line Follower Robot | ESP32 + Advanced Control</p>
+            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Built with ❤️ for Robotics & Automation</p>
+        </div>
+    </footer>
+
+    <!-- SCROLL TO TOP BUTTON -->
+    <button class="scroll-btn" id="scrollBtn">↑</button>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                }
+            });
+        });
+
+        // Scroll to top button functionality
+        const scrollBtn = document.getElementById('scrollBtn');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                scrollBtn.classList.add('show');
+            } else {
+                scrollBtn.classList.remove('show');
+            }
+        });
+
+        scrollBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'slideIn 0.6s ease-out forwards';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .logic-card').forEach(card => {
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
